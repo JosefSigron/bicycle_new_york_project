@@ -11,7 +11,7 @@ The exact MRT involves a non-linear Stefan–Boltzmann inversion:
 
 $$
 \[
-\mathit{MRT}^* = \Biggl\{\frac{1}{\sigma}\Biggl[f_a\,L_{\mathrm{surf}}^{\mathrm{dn}} + f_a\,L_{\mathrm{surf}}^{\mathrm{up}} + \frac{\alpha_{\mathrm{ir}}}{\varepsilon_p} \Bigl(f_a\,S_{\mathrm{surf}}^{\mathrm{dn,diffuse}} + f_a\,S_{\mathrm{surf}}^{\mathrm{up}} + f_p\,I^*\Bigr)\Biggr]\Biggr\}^{1/4}
+\mathit{MRT}^* = \left\{\frac{1}{\sigma}\left[f_a\,L_{\mathrm{surf}}^{\mathrm{dn}} + f_a\,L_{\mathrm{surf}}^{\mathrm{up}} + \frac{\alpha_{\mathrm{ir}}}{\varepsilon_p} \left(f_a\,S_{\mathrm{surf}}^{\mathrm{dn,diffuse}} + f_a\,S_{\mathrm{surf}}^{\mathrm{up}} + f_p\,I^*\right)\right]\right\}^{1/4}
 \]
 $$
 

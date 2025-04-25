@@ -10,7 +10,7 @@ Mean radiant temperature (MRT) represents the uniform temperature of a hypotheti
 The exact MRT involves a non-linear Stefan–Boltzmann inversion:
 
 $$
-\mathit{MRT}^* = \Bigl{\frac{1}{\sigma}[f_a L_{\mathrm{surf}}^{\mathrm{dn}} + f_a L_{\mathrm{surf}}^{\mathrm{up}} + \frac{\alpha_{\mathrm{ir}}}{\varepsilon_p} (f_a S_{\mathrm{surf}}^{\mathrm{dn,diffuse}} + f_a S_{\mathrm{surf}}^{\mathrm{up}} + f_p I^*)]\Bigr}^{1/4} 
+\mathit{MRT}^* = \Bigl[\frac{1}{\sigma}[f_a L_{\mathrm{surf}}^{\mathrm{dn}} + f_a L_{\mathrm{surf}}^{\mathrm{up}} + \frac{\alpha_{\mathrm{ir}}}{\varepsilon_p} (f_a S_{\mathrm{surf}}^{\mathrm{dn,diffuse}} + f_a S_{\mathrm{surf}}^{\mathrm{up}} + f_p I^*)]\Bigr]^{1/4} 
 $$
 
 where:

@@ -10,9 +10,7 @@ Mean radiant temperature (MRT) represents the uniform temperature of a hypotheti
 The exact MRT involves a non-linear Stefan–Boltzmann inversion:
 
 $$
-\
 \mathit{MRT}^* = \{\frac{1}{\sigma}[f_a\, L_{\mathrm{surf}}^{\mathrm{dn}} + f_a\, L_{\mathrm{surf}}^{\mathrm{up}} + \frac{\alpha_{\mathrm{ir}}}{\varepsilon_p} (f_a\, S_{\mathrm{surf}}^{\mathrm{dn,diffuse}} + f_a\, S_{\mathrm{surf}}^{\mathrm{up}} + f_p\, I^*)]\}^{1/4}
-\
 $$
 
 where:
@@ -32,25 +30,19 @@ While accurate, this form is cumbersome for large datasets.  We can simplify by 
 
 1. **Background (long-wave) flux** from air temperature:
 $$
-   \
    \Phi_{\mathrm{bg}} = \sigma\,T_{\mathrm{air}}^4
-   \
 $$
    where $\(T_{\mathrm{air}}\)$ is in Kelvin.
 
 2. **Solar perturbation flux** (direct + diffuse + reflections):
    $$
-   \
    \Delta\Phi_{\mathrm{solar}} = \frac{\alpha_{\mathrm{ir}}}{\varepsilon_p} \Bigl(f_a\,S_{\mathrm{tot}}\Bigr)
-   \
    $$
    with $\(S_{\mathrm{tot}}\approx\)$ estimated global solar flux $(W/m²)$.
 
 Thus the _total_ radiant flux inside the fourth root is
 $$
-\
 \Phi_{\mathrm{total}} = \Phi_{\mathrm{bg}} + \Delta\Phi_{\mathrm{solar}}
-\
 $$
 ---
 
@@ -58,34 +50,25 @@ $$
 
 We wish to approximate
 $$
-\
 \mathit{MRT}^* = \bigl(\Phi_{\mathrm{bg}} + \Delta\Phi_{\mathrm{solar}}\bigr)^{1/4}
-\
 $$
 Let
 $$
-\
   x = \Phi_{\mathrm{bg}} = \sigma\,T_{\mathrm{air}}^4,
   \quad
-  \delta = \Delta\Phi_{\mathrm{solar}},
-\
+  \delta = \Delta\Phi_{\mathrm{solar}}
 $$
 and define a function
 $$
-\
   f(X) = X^{1/4}.
-\
 $$
 ### 2.1 First-order expansion
 
 The Taylor series around $\(X=x\)$ gives:
 $$
-\
   f(x + \delta) \approx f(x) + f'(x)\,\delta,
-\where
-\
+where
   f'(X) = \frac{1}{4}\,X^{-3/4}.
-\
 $$
 Substituting $\(X = x = \sigma T_{\mathrm{air}}^4\)$:
 
@@ -94,9 +77,7 @@ Substituting $\(X = x = \sigma T_{\mathrm{air}}^4\)$:
 
 Therefore,
 $$
-\[
 \mathit{MRT}^* \approx T_{\mathrm{air}} + \frac{\Delta\Phi_{\mathrm{solar}}}{4\,\sigma\,T_{\mathrm{air}}^3}.
-\]
 $$
 ---
 
@@ -111,9 +92,7 @@ $$
 4. Empirical factors (emissivity, view angles, etc.) can be lumped in, effectively scaling the denominator to $\(\approx600\,\mathrm{W/m^2/K}\)$.  
 5. Thus a solar flux change $\(100\,\mathrm{W/m^2}\)$ yields:
 $$
-   \[
    \Delta T \approx \frac{100}{600} \approx 0.17\,\mathrm{K}.
-   \]
 $$
 ---
 

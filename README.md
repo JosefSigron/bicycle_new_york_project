@@ -10,7 +10,7 @@ Mean radiant temperature (MRT) represents the uniform temperature of a hypotheti
 The exact MRT involves a non-linear Stefan–Boltzmann inversion:
 
 $$
-\mathit{MRT}^* = \left\{\frac{1}{\sigma}\left[f_a L_{\mathrm{surf}}^{\mathrm{dn}} + f_a L_{\mathrm{surf}}^{\mathrm{up}} + \frac{\alpha_{\mathrm{ir}}}{\varepsilon_p} \left(f_a S_{\mathrm{surf}}^{\mathrm{dn,diffuse}} + f_a S_{\mathrm{surf}}^{\mathrm{up}} + f_p I^*\right)\right]\right\}^{1/4}
+\mathit{MRT}^* = \left\{\frac{1}{\sigma}\left[f_a L_{\mathrm{surf}}^{\mathrm{dn}} + f_a L_{\mathrm{surf}}^{\mathrm{up}} + \frac{\alpha_{\mathrm{ir}}}{\varepsilon_p} \left(f_a S_{\mathrm{surf}}^{\mathrm{dn,diffuse}} + f_a S_{\mathrm{surf}}^{\mathrm{up}} + f_p I^*\right)\right]\right\}^{1/4} 
 $$
 
 where:
@@ -101,7 +101,7 @@ $$
 All geometric and material factors are absorbed into a single empirical gain.  In practice:
 
 - We set $\(\alpha_{\mathrm{ir}}\approx0.7\), \(\varepsilon_p\approx1\)$, and view-angle factors to unity.
-- Define $\(G = 0.7/100\) (in K per W/m²)$.
+- Define $\(G = 0.7/100\)$ (in K per W/m²).
 
 The resulting _linear_ formula becomes:
 

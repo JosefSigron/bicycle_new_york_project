@@ -3,61 +3,162 @@ import numpy as np
 from math import pi
 import pythermalcomfort
 
-def estimate_solar_radiation(df):
+def parse_sky_cover(df):
     """
-    Estimate solar radiation using Hargreaves-Samani method
-    Requires temperature data
+    Parse sky cover codes from the dataset and convert to cloud cover fraction (0-1).
+    
+    The dataset contains up to 3 cloud layers (sky_cover_1, sky_cover_2, sky_cover_3).
+    Per documentation, the last layer's value best represents the total sky state.
+    
+    Oktas values conversion:
+    CLR:00 = 0.0 (Clear sky)
+    FEW:01 = 0.1 (1/10 or less but not zero)
+    FEW:02 = 0.25 (2/10 - 3/10)
+    SCT:03 = 0.4 (4/10)
+    SCT:04 = 0.5 (5/10)
+    BKN:05 = 0.6 (6/10)
+    BKN:06 = 0.75 (7/10 - 8/10)
+    BKN:07 = 0.9 (9/10 or more but not 10/10)
+    OVC:08 = 1.0 (10/10, completely overcast)
+    VV:09 = 1.0 (Sky obscured)
+    X:10 = 0.5 (Partial obscuration - assume 50%)
+    
+    Parameters:
+    df: DataFrame with sky_cover_1, sky_cover_2, and/or sky_cover_3 columns
+    
+    Returns:
+    DataFrame with added cloud_cover column (0-1 scale)
     """
-    # Extract latitude for solar calculations
-    lat = df['LATITUDE'].iloc[0]
+    print("Parsing sky cover data...")
     
-    # Convert date to datetime
-    df['datetime'] = pd.to_datetime(df['DATE'])
+    # Check which sky cover columns exist
+    sky_cover_columns = [col for col in ['sky_cover_1', 'sky_cover_2', 'sky_cover_3'] if col in df.columns]
     
-    # Extract day of year for solar calculations
-    df['day_of_year'] = df['datetime'].dt.dayofyear
+    if not sky_cover_columns:
+        print("  - No sky cover columns found in dataset")
+        return df
     
-    # Calculate extraterrestrial radiation
-    # Convert latitude to radians
-    lat_rad = lat * pi / 180.0
+    # Conversion dictionary for sky cover codes to cloud fraction
+    sky_code_to_fraction = {
+        'CLR:00': 0.0,
+        'SKC': 0.0,  # Sometimes Clear is represented as SKC
+        'CLR': 0.0,  # Sometimes Clear is represented as just CLR
+        'FEW:01': 0.1,
+        'FEW:02': 0.25,
+        'FEW': 0.25,  # If only FEW is given, assume 2/10-3/10
+        'SCT:03': 0.4,
+        'SCT:04': 0.5,
+        'SCT': 0.5,  # If only SCT is given, assume 5/10
+        'BKN:05': 0.6,
+        'BKN:06': 0.75,
+        'BKN:07': 0.9,
+        'BKN': 0.75,  # If only BKN is given, assume 7/10-8/10
+        'OVC:08': 1.0,
+        'OVC': 1.0,  # If only OVC is given, assume 10/10
+        'VV:09': 1.0,
+        'VV': 1.0,
+        'X:10': 0.5,
+        'X': 0.5
+    }
     
-    # Calculate solar declination for each day
-    df['solar_declination'] = 0.409 * np.sin(2 * pi * df['day_of_year'] / 365 - 1.39)
+    # Function to extract cloud fraction from a code
+    def extract_cloud_fraction(code):
+        if pd.isna(code) or code == 'nan' or not code:
+            return np.nan
+            
+        code = str(code).strip().upper()
+        
+        # Direct lookup
+        if code in sky_code_to_fraction:
+            return sky_code_to_fraction[code]
+            
+        # Try to parse numeric part if format is different
+        for key in sky_code_to_fraction:
+            if code.startswith(key.split(':')[0]):
+                return sky_code_to_fraction[key]
+                
+        # If we can't parse it, return NaN
+        return np.nan
     
-    # Calculate sunset hour angle
-    df['sunset_hour_angle'] = np.arccos(-np.tan(lat_rad) * np.tan(df['solar_declination']))
+    # Apply conversion to all sky cover columns
+    for col in sky_cover_columns:
+        df[f'{col}_fraction'] = df[col].apply(extract_cloud_fraction)
     
-    # Calculate extraterrestrial radiation
-    dr = 1 + 0.033 * np.cos(2 * pi * df['day_of_year'] / 365)
-    df['Ra'] = (24 * 60 / pi) * 0.0820 * dr * (
-        df['sunset_hour_angle'] * np.sin(lat_rad) * np.sin(df['solar_declination']) +
-        np.cos(lat_rad) * np.cos(df['solar_declination']) * np.sin(df['sunset_hour_angle'])
+    # Use the last available layer as the overall cloud cover
+    # This follows the documentation that the last layer best represents total sky state
+    df['cloud_cover'] = np.nan
+    
+    # Try sky_cover_3 first, then fall back to sky_cover_2, then sky_cover_1
+    if 'sky_cover_3_fraction' in df.columns:
+        df['cloud_cover'] = df['sky_cover_3_fraction']
+        
+    if 'sky_cover_2_fraction' in df.columns:
+        df.loc[df['cloud_cover'].isna(), 'cloud_cover'] = df.loc[df['cloud_cover'].isna(), 'sky_cover_2_fraction']
+        
+    if 'sky_cover_1_fraction' in df.columns:
+        df.loc[df['cloud_cover'].isna(), 'cloud_cover'] = df.loc[df['cloud_cover'].isna(), 'sky_cover_1_fraction']
+    
+    # Default to 0.5 (partly cloudy) if all values are missing
+    df['cloud_cover'] = df['cloud_cover'].fillna(0.5)
+    
+    # Clean up temporary columns
+    for col in sky_cover_columns:
+        if f'{col}_fraction' in df.columns:
+            df = df.drop(f'{col}_fraction', axis=1)
+    
+    cover_counts = df['cloud_cover'].value_counts(normalize=True).sort_index() * 100
+    print(f"  - Cloud cover distribution: {', '.join([f'{v:.1f}% at {k:.1f}' for k, v in cover_counts.items()])}")
+    
+    return df
+
+def calculate_mean_radiant_temperature(df):
+    """
+    Calculate Mean Radiant Temperature (MRT) using a simplified method based on air temperature
+    and cloud cover fraction, following the approach from Thorsson et al. (2007).
+    
+    Parameters:
+    df: DataFrame with temperature and cloud_cover columns
+    
+    Returns:
+    DataFrame with added mean_radiant_temp column
+    """
+    print("Calculating Mean Radiant Temperature...")
+    
+    # If cloud cover is not available, use a default value of 50% (0.5)
+    if 'cloud_cover' not in df.columns or df['cloud_cover'].isna().all():
+        print("  - Cloud cover data not available, using default value of 0.5")
+        df['cloud_cover'] = 0.5
+    
+    # Ensure cloud_cover is numeric and between 0-1
+    df['cloud_cover'] = pd.to_numeric(df['cloud_cover'], errors='coerce')
+    df['cloud_cover'] = df['cloud_cover'].clip(0, 1)
+    
+    # Calculate the solar adjustment factor based on cloud cover
+    # This follows Lindberg et al. (2008) simplified approach
+    # Clear sky = higher adjustment, overcast = lower adjustment
+    solar_factor = (1 - 0.75 * df['cloud_cover'])
+    
+    # Calculate MRT using the simple formula:
+    # MRT ≈ Tair + solar_adjustment
+    # The solar adjustment is higher during the day and zero at night
+    
+    # Determine if it's day or night based on hour
+    df['is_daytime'] = df['datetime'].dt.hour.between(6, 18)
+    
+    # Apply the adjustment only during daytime
+    df['solar_adjustment'] = np.where(
+        df['is_daytime'],
+        solar_factor * 4.0,  # Up to 4°C adjustment for clear sky days
+        0.0                  # No adjustment at night
     )
     
-    # Basic Hargreaves-Samani method
-    # Need to calculate temperature difference
-    df_daily = df.groupby(df['datetime'].dt.date).agg({
-        'temperature': ['max', 'min']
-    })
+    # Calculate MRT as air temperature plus solar adjustment
+    df['mean_radiant_temp'] = df['temperature'] + df['solar_adjustment']
     
-    df_daily.columns = ['temp_max', 'temp_min']
-    df_daily = df_daily.reset_index()
-    df_daily['temp_diff'] = df_daily['temp_max'] - df_daily['temp_min']
+    print(f"  - MRT calculated: ranges from {df['mean_radiant_temp'].min():.1f}°C to {df['mean_radiant_temp'].max():.1f}°C")
     
-    # Create a date string column to use for merging
-    df['date_str'] = df['datetime'].dt.date.astype(str)
-    df_daily['date_str'] = df_daily['datetime'].astype(str)
-    
-    # Join back to original dataframe
-    df = pd.merge(df, df_daily[['date_str', 'temp_diff']], 
-                 on='date_str', 
-                 how='left')
-    
-    # Apply Hargreaves-Samani equation
-    # Rs = KT * Ra * sqrt(Tmax - Tmin)
-    # KT is a coefficient (0.16 for inland areas, 0.19 for coastal)
-    KT = 0.17  # Assuming NYC is coastal but slightly inland
-    df['solar_radiation_estimated'] = KT * df['Ra'] * np.sqrt(df['temp_diff'])
+    # Clean up temporary columns
+    df = df.drop(['is_daytime', 'solar_adjustment'], axis=1, errors='ignore')
     
     return df
 
@@ -135,8 +236,6 @@ def categorize_weather(utci, rain, snow):
     else:
         return "Neutral"
     
-
-
 def fill_missing_with_3month_avg(df, columns):
     """
     Fill missing values with a 3-month average (90 day window).
@@ -333,12 +432,15 @@ def main():
     df['temperature'] = pd.to_numeric(df['temperature'], errors='coerce')
     df['wind_speed'] = pd.to_numeric(df['wind_speed'], errors='coerce')
     df['relative_humidity'] = pd.to_numeric(df['relative_humidity'], errors='coerce')
-
+    
     # Convert date to datetime
     df['datetime'] = pd.to_datetime(df['DATE'])
     
+    # Parse sky cover data to get cloud cover fraction
+    df = parse_sky_cover(df)
+    
     # Fill missing values with 3-month averages
-    fill_columns = ['temperature', 'wind_speed', 'relative_humidity', 'LATITUDE', 'LONGITUDE']
+    fill_columns = ['temperature', 'wind_speed', 'relative_humidity']
     df = fill_missing_with_3month_avg(df, fill_columns)
     
     # Handle any remaining missing values
@@ -346,13 +448,8 @@ def main():
     if remaining_missing > 0:
         print(f"Warning: {remaining_missing} values still missing after 3-month average filling")
     
-    # Estimate solar radiation
-    print("Estimating solar radiation...")
-    df = estimate_solar_radiation(df)
-    
-    # Calculate UTCI
-    print("Calculating UTCI...")
-    df['mean_radiant_temp'] = df['temperature'] + 0.7 * df['solar_radiation_estimated'] / 100
+    # Calculate MRT using the simplified method
+    df = calculate_mean_radiant_temperature(df)
     
     # Apply the UTCI calculation
     print("Computing UTCI values...")
@@ -376,17 +473,16 @@ def main():
         row['rain'], 
         row['snow']), axis=1)
     
-
     # Save the result
     print("Saving results...")
     output_columns = [
         'datetime', 'temperature', 'wind_speed', 'relative_humidity', 
-        'solar_radiation_estimated', 'mean_radiant_temp', 'precipitation',
+        'cloud_cover', 'mean_radiant_temp', 'precipitation',
         'utci', 'utci_cat', 'rain', 'snow', 'weather_cat',
+        'sky_cover_1', 'sky_cover_2', 'sky_cover_3',
         'pres_wx_AW1', 'pres_wx_AW2', 'pres_wx_AW3',
         'pres_wx_MW1', 'pres_wx_MW2', 'pres_wx_MW3',
-        'pres_wx_AU1', 'pres_wx_AU2', 'pres_wx_AU3',
-        
+        'pres_wx_AU1', 'pres_wx_AU2', 'pres_wx_AU3'
     ]
     
     # Only include columns that exist in the dataframe

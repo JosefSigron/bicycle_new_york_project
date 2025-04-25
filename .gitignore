@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Local development settings
+.env
+.venv
+.idea/
+.vscode/
+
+# OS specific files
+.DS_Store
+Thumbs.db 
+
+# Large data files - exclude entire directories
+data/
+results/
+*.parquet
+*.csv
+word_docs/*.pdf
+# You may want to keep a small sample of data files for demonstration purposes
+# !data/citibike/sample/*.csv 

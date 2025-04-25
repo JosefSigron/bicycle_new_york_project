@@ -1,0 +1,7 @@
+numpy>=1.21.0
+pyarrow>=7.0.0
+pandas>=1.5.0
+dask>=2023.3.0
+distributed>=2023.3.0
+bokeh>=2.4.0  # For Dask dashboard
+dask-cuda>=23.12.0  # For GPU acceleration with Dask 

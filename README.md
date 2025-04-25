@@ -10,13 +10,13 @@ Mean radiant temperature (MRT) represents the uniform temperature of a hypotheti
 The exact MRT involves a non-linear Stefan–Boltzmann inversion:
 
 $$
-\mathit{MRT}^* = \{\frac{1}{\sigma}[f_a\, L_{\mathrm{surf}}^{\mathrm{dn}} + f_a\, L_{\mathrm{surf}}^{\mathrm{up}} + \frac{\alpha_{\mathrm{ir}}}{\varepsilon_p} (f_a\, S_{\mathrm{surf}}^{\mathrm{dn,diffuse}} + f_a\, S_{\mathrm{surf}}^{\mathrm{up}} + f_p\, I^*)]\}^{1/4}
+\mathit{MRT}^* = \left\{\frac{1}{\sigma}\left[f_aL_{\mathrm{surf}}^{\mathrm{dn}} + f_aL_{\mathrm{surf}}^{\mathrm{up}} + \frac{\alpha_{\mathrm{ir}}}{\varepsilon_p} \left(f_aS_{\mathrm{surf}}^{\mathrm{dn,diffuse}} + f_aS_{\mathrm{surf}}^{\mathrm{up}} + f_pI^*\right)\right]\right\}^{1/4}
 $$
 
 where:
 
 
-- $\(\sigma = 5.67\times10^{-8}\,\mathrm{W/m^2/K^4}\)$ is the Stefan–Boltzmann constant.
+- $\(\sigma = 5.67\times10^{-8}\mathrm{W/m^2/K^4}\)$ is the Stefan–Boltzmann constant.
 - $\(L_{\mathrm{surf}}\)$ terms are downwelling/upwelling long-wave fluxes $(W/m²)$.
 - $\(S_{\mathrm{surf}}\)$ terms and $\(I^*\)$ handle solar short-wave fluxes $(W/m²)$.
 - $\(f_a, f_p, \alpha_{\mathrm{ir}}, \varepsilon_p\)$ are geometry/emissivity factors.
@@ -30,13 +30,13 @@ While accurate, this form is cumbersome for large datasets.  We can simplify by 
 
 1. **Background (long-wave) flux** from air temperature:
 $$
-   \Phi_{\mathrm{bg}} = \sigma\,T_{\mathrm{air}}^4
+   \Phi_{\mathrm{bg}} = \sigmaT_{\mathrm{air}}^4
 $$
    where $\(T_{\mathrm{air}}\)$ is in Kelvin.
 
 2. **Solar perturbation flux** (direct + diffuse + reflections):
    $$
-   \Delta\Phi_{\mathrm{solar}} = \frac{\alpha_{\mathrm{ir}}}{\varepsilon_p} \Bigl(f_a\,S_{\mathrm{tot}}\Bigr)
+   \Delta\Phi_{\mathrm{solar}} = \frac{\alpha_{\mathrm{ir}}}{\varepsilon_p} \Bigl(f_aS_{\mathrm{tot}}\Bigr)
    $$
    with $\(S_{\mathrm{tot}}\approx\)$ estimated global solar flux $(W/m²)$.
 
@@ -54,7 +54,7 @@ $$
 $$
 Let
 $$
-  x = \Phi_{\mathrm{bg}} = \sigma\,T_{\mathrm{air}}^4,
+  x = \Phi_{\mathrm{bg}} = \sigmaT_{\mathrm{air}}^4,
   \quad
   \delta = \Delta\Phi_{\mathrm{solar}}
 $$
@@ -66,33 +66,33 @@ $$
 
 The Taylor series around $\(X=x\)$ gives:
 $$
-  f(x + \delta) \approx f(x) + f'(x)\,\delta,
+  f(x + \delta) \approx f(x) + f'(x)\delta,
 where
-  f'(X) = \frac{1}{4}\,X^{-3/4}.
+  f'(X) = \frac{1}{4}X^{-3/4}.
 $$
 Substituting $\(X = x = \sigma T_{\mathrm{air}}^4\)$:
 
 - $\(f(x) = x^{1/4} = T_{\mathrm{air}}\)$.
-- $\[f'(x) = \frac{1}{4}\,\bigl(\sigma T_{\mathrm{air}}^4\bigr)^{-3/4} = \frac{1}{4\,\sigma\,T_{\mathrm{air}}^3}.\]$
+- $\[f'(x) = \frac{1}{4}\bigl(\sigma T_{\mathrm{air}}^4\bigr)^{-3/4} = \frac{1}{4\sigmaT_{\mathrm{air}}^3}.\]$
 
 Therefore,
 $$
-\mathit{MRT}^* \approx T_{\mathrm{air}} + \frac{\Delta\Phi_{\mathrm{solar}}}{4\,\sigma\,T_{\mathrm{air}}^3}.
+\mathit{MRT}^* \approx T_{\mathrm{air}} + \frac{\Delta\Phi_{\mathrm{solar}}}{4\sigmaT_{\mathrm{air}}^3}.
 $$
 ---
 
 ## 3. Numerical Example (Typical Values)
 
-- **Air temperature**: $\(T_{\mathrm{air}} = 300\,\mathrm{K}\)$.
-- **Stefan–Boltzmann constant**: $\(\sigma = 5.67\times10^{-8}\,\mathrm{W/m^2/K^4}\)$.
+- **Air temperature**: $\(T_{\mathrm{air}} = 300\mathrm{K}\)$.
+- **Stefan–Boltzmann constant**: $\(\sigma = 5.67\times10^{-8}\mathrm{W/m^2/K^4}\)$.
 
 1. Compute $\(T_{\mathrm{air}}^3 = 300^3 = 27\times10^6\)$.  
-2. Compute $\(\sigma\,T_{\mathrm{air}}^3 = 5.67\times10^{-8} \times 27\times10^6 \approx 1.53\,\mathrm{W/m^2/K}\)$.  
-3. Multiply by 4: $\(4\,\sigma\,T_{\mathrm{air}}^3 \approx 6.12\,\mathrm{W/m^2/K}\)$.  
-4. Empirical factors (emissivity, view angles, etc.) can be lumped in, effectively scaling the denominator to $\(\approx600\,\mathrm{W/m^2/K}\)$.  
-5. Thus a solar flux change $\(100\,\mathrm{W/m^2}\)$ yields:
+2. Compute $\(\sigmaT_{\mathrm{air}}^3 = 5.67\times10^{-8} \times 27\times10^6 \approx 1.53\mathrm{W/m^2/K}\)$.  
+3. Multiply by 4: $\(4\sigmaT_{\mathrm{air}}^3 \approx 6.12\mathrm{W/m^2/K}\)$.  
+4. Empirical factors (emissivity, view angles, etc.) can be lumped in, effectively scaling the denominator to $\(\approx600\mathrm{W/m^2/K}\)$.  
+5. Thus a solar flux change $\(100\mathrm{W/m^2}\)$ yields:
 $$
-   \Delta T \approx \frac{100}{600} \approx 0.17\,\mathrm{K}.
+   \Delta T \approx \frac{100}{600} \approx 0.17\mathrm{K}.
 $$
 ---
 

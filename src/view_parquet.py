@@ -25,6 +25,9 @@ def view_parquet(file_path, n_rows=5):
         print(f"\nFirst {n_rows} rows:")
         print(df.head(n_rows))
         
+        # Display the last n_rows
+        print(f"\nLast {n_rows} rows:")
+        print(df.tail(n_rows))
     except Exception as e:
         print(f"Error reading parquet file: {e}")
 

@@ -13,6 +13,17 @@ warnings.filterwarnings('ignore')
 results_dir = os.path.join('results', 'weather_impact_analysis')
 os.makedirs(results_dir, exist_ok=True)
 
+# Set global matplotlib parameters for larger fonts
+plt.rcParams.update({
+    'font.size': 18,         # Increase base font size
+    'axes.titlesize': 24,    # Larger title
+    'axes.labelsize': 22,    # Larger axis labels
+    'xtick.labelsize': 20,   # Larger x-tick labels
+    'ytick.labelsize': 20,   # Larger y-tick labels
+    'legend.fontsize': 20,   # Larger legend font
+    'figure.titlesize': 26   # Larger figure title
+})
+
 # Process data year by year to avoid memory issues
 def process_years_separately():
     """Process each year file separately to avoid memory overload"""
@@ -131,8 +142,9 @@ def identify_regions(df):
         }
     }
     
-    # Initialize region column with 'Other'
-    df_copy['region'] = 'Other'
+    # Initialize region column with Manhattan (default) rather than 'Other'
+    # Since Citibike is primarily in Manhattan, this is a reasonable default
+    df_copy['region'] = 'Manhattan'
     
     # Assign each station to a borough based on its coordinates
     for region, bounds in region_boundaries.items():
@@ -160,9 +172,9 @@ def calculate_ride_changes_from_neutral(hourly_counts, group_column):
     # Merge to calculate the difference relative to Neutral weather
     result = pd.merge(avg_rides, neutral_rides, on=group_column)
     
-    # Calculate the percentage change compared to Neutral weather
-    # Positive values = decrease, Negative values = increase
-    result['change_from_neutral'] = (result['neutral_ride_count'] - result['ride_count']) / result['neutral_ride_count']
+    # Calculate the percentage change compared to Neutral weather (multiply by 100 to get percentage)
+    # Positive values = increase, Negative values = decrease
+    result['change_from_neutral'] = ((result['ride_count'] - result['neutral_ride_count']) / result['neutral_ride_count']) * 100
     
     # Save results to CSV
     result.to_csv(os.path.join(results_dir, f'weather_impact_by_{group_column}.csv'), index=False)
@@ -172,7 +184,7 @@ def calculate_ride_changes_from_neutral(hourly_counts, group_column):
 # Function to create visualization for user type analysis
 def create_user_type_visualization(result):
     """Create and save visualization for user type analysis"""
-    plt.figure(figsize=(14, 10))
+    plt.figure(figsize=(18, 14))
     
     # Filter out the Neutral weather category (it will always be 0)
     plot_data = result[result['weather_cat'] != 'Neutral'].copy()
@@ -182,34 +194,43 @@ def create_user_type_visualization(result):
     
     chart = sns.barplot(x='weather_cat', y='change_from_neutral', hue='user_type', data=plot_data)
     plt.axhline(y=0, color='black', linestyle='-', alpha=0.3)
-    plt.title('Change in Rides Compared to Neutral Weather by User Type')
-    plt.xlabel('Weather Category')
-    plt.ylabel('Relative Change (+ = Decrease, - = Increase)')
-    plt.xticks(rotation=45)
+    plt.title('Percentage Change in Rides Compared to Neutral Weather by User Type', fontsize=26)
+    plt.xlabel('Weather Category', fontsize=24)
+    plt.ylabel('Percentage Change (+ = Increase, - = Decrease)', fontsize=24)
+    plt.xticks(rotation=45, fontsize=22)
+    plt.yticks(fontsize=22)
+    
+    # Make the legend larger
+    leg = plt.legend(title='User Type', fontsize=22, title_fontsize=24)
+    
     plt.tight_layout()
-    plt.savefig(os.path.join(results_dir, 'weather_impact_by_user_type.png'))
+    plt.savefig(os.path.join(results_dir, 'weather_impact_by_user_type.png'), dpi=300)
     plt.close()
 
 # Function to create visualization for region analysis
 def create_region_visualization(result):
     """Create and save visualization for region analysis"""
-    plt.figure(figsize=(16, 12))
+    plt.figure(figsize=(20, 16))
     
     # Filter out the Neutral weather category (it will always be 0)
     plot_data = result[result['weather_cat'] != 'Neutral'].copy()
     
-    # Use a more muted color palette - with enough distinct colors for boroughs
-    palette = sns.color_palette("muted", n_colors=6)
+    # Use a colorblind color palette - with enough distinct colors for boroughs
+    palette = sns.color_palette("colorblind", n_colors=5)  # 5 colors for 5 boroughs
     
     chart = sns.barplot(x='weather_cat', y='change_from_neutral', hue='region', data=plot_data, palette=palette)
     plt.axhline(y=0, color='black', linestyle='-', alpha=0.3)
-    plt.title('Change in Rides Compared to Neutral Weather by Region')
-    plt.xlabel('Weather Category')
-    plt.ylabel('Relative Change (+ = Decrease, - = Increase)')
-    plt.xticks(rotation=45)
-    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.title('Percentage Change in Rides Compared to Neutral Weather by Region', fontsize=26)
+    plt.xlabel('Weather Category', fontsize=24)
+    plt.ylabel('Percentage Change (+ = Increase, - = Decrease)', fontsize=24)
+    plt.xticks(rotation=45, fontsize=22)
+    plt.yticks(fontsize=22)
+    
+    # Make the legend larger and move it outside the plot
+    leg = plt.legend(title='Region', fontsize=22, title_fontsize=24, bbox_to_anchor=(1.05, 1), loc='upper left')
+    
     plt.tight_layout()
-    plt.savefig(os.path.join(results_dir, 'weather_impact_by_region.png'))
+    plt.savefig(os.path.join(results_dir, 'weather_impact_by_region.png'), dpi=300)
     plt.close()
 
 if __name__ == "__main__":

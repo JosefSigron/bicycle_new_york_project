@@ -1,98 +1,82 @@
-# Simplified Mean Radiant Temperature Calculation
+# Bicycle New York Project
 
-This document explains the simplified approach for calculating Mean Radiant Temperature (MRT) used in our weather analysis.
+This repository contains a data analysis project that examines the relationship between weather conditions and Citibike ridership in New York City. The project processes and analyzes Citibike ride data along with weather data to understand patterns and correlations.
 
-## Introduction
+## Project Overview
 
-Mean radiant temperature (MRT) represents the uniform temperature of a hypothetical black body that would emit the same net thermal radiation to a person as the actual environment. It combines:
+This project aims to:
+- Analyze Citibike ridership patterns across different years
+- Process and analyze weather data for New York City
+- Explore the impact of weather conditions on bicycle ridership
+- Create visualizations of ride distributions and weather impacts
 
-- **Long-wave (infrared) radiation** emitted by surrounding surfaces and the sky.
-- **Short-wave (solar) radiation** from direct sunlight, diffuse sky, and reflections.
+## Dependencies
 
-## The Simplified Approach
-
-While traditional MRT calculations involve complex radiation models using the Stefan-Boltzmann law, we've implemented a simpler approach based on empirical research by Lindberg et al. (2008) and Thorsson et al. (2007).
-
-### Key Formula
-
-Our simplified approach uses a linear relationship:
-
-$$
-\text{MRT} = T_{\text{air}} + \text{Solar Adjustment}
-$$
-
-Where:
-- $T_{\text{air}}$ is air temperature in °C
-- Solar Adjustment varies based on cloud cover and time of day
-
-### Solar Adjustment Calculation
-
-The solar adjustment is calculated as:
-
-$$
-\text{Solar Adjustment} = 
-\begin{cases}
-(1 - 0.75 \times \text{Cloud Cover}) \times 4°\text{C} & \text{during day} \\
-0°\text{C} & \text{during night}
-\end{cases}
-$$
-
-Where:
-- Cloud Cover is expressed as a fraction from 0 (clear sky) to 1 (complete overcast)
-- Day is defined as hours between 6:00 and 18:00
-- The maximum adjustment of 4°C on clear days is based on empirical studies
-
-## Cloud Cover Data
-
-We derive cloud cover from weather station data using the standard meteorological "oktas" coding system, representing eighths of sky coverage:
-
-| Code | Description | Cloud Cover Fraction |
-|------|-------------|---------------------|
-| CLR:00 | Clear sky | 0.0 |
-| FEW:01 | One okta (1/10 or less but not zero) | 0.1 |
-| FEW:02 | Two oktas (2/10 - 3/10) | 0.25 |
-| SCT:03 | Three oktas (4/10) | 0.4 |
-| SCT:04 | Four oktas (5/10) | 0.5 |
-| BKN:05 | Five oktas (6/10) | 0.6 |
-| BKN:06 | Six oktas (7/10 - 8/10) | 0.75 |
-| BKN:07 | Seven oktas (9/10 or more but not 10/10) | 0.9 |
-| OVC:08 | Eight oktas (10/10, completely overcast) | 1.0 |
-| VV:09 | Sky obscured | 1.0 |
-| X:10 | Partial obscuration | 0.5 |
-
-When multiple cloud layers are reported, we use the last layer's value to best represent the total sky state, as per meteorological conventions.
-
-## Advantages of This Approach
-
-1. **Simplicity**: Easy to implement and understand
-2. **Efficiency**: Computationally light for large datasets
-3. **Physical Interpretability**: Clear connection to observable weather conditions
-4. **Empirical Basis**: Validated by research studies
-5. **No Complex Parameters**: No need for radiation flux measurements or view factors
-
-## Implementation
-
-The implementation reads cloud cover data from weather station reports, converts oktas codes to fractional values, and applies the formula above to calculate MRT for each timestamp.
-
-```python
-# Simplified MRT calculation
-df['mean_radiant_temp'] = df['temperature'] + np.where(
-    df['datetime'].dt.hour.between(6, 18),  # If daytime
-    (1 - 0.75 * df['cloud_cover']) * 4.0,   # Apply solar adjustment
-    0.0                                     # No adjustment at night
-)
+The project requires the following Python packages:
+```
+numpy>=1.21.0
+pyarrow>=7.0.0
+pandas>=1.5.0
+dask>=2023.3.0
+distributed>=2023.3.0
+bokeh>=2.4.0  # For Dask dashboard
+dask-cuda>=23.12.0  # For GPU acceleration with Dask 
 ```
 
-## References
+Install dependencies with:
+```bash
+pip install -r requirements.txt
+```
 
-1. Lindberg, F., Holmer, B., & Thorsson, S. (2008). "SOLWEIG 1.0 – Modelling spatial variations of 3D radiant fluxes and mean radiant temperature in complex urban settings." International Journal of Biometeorology, 52(7), 697-713.
-   https://doi.org/10.1007/s00484-008-0162-7
+## Directory Structure
 
-2. Thorsson, S., Lindberg, F., Eliasson, I., & Holmer, B. (2007). "Different methods for estimating the mean radiant temperature in an outdoor urban setting." International Journal of Climatology, 27(14), 1983-1993.
-   https://doi.org/10.1002/joc.1537
+- `src/`: Python scripts for data processing and analysis
+- `data/`: Contains raw and processed data files
+- `results/`: Output directory for analysis results and visualizations
+- `word_docs/`: Documentation files
 
-3. Kántor, N., & Unger, J. (2011). "The most problematic variable in the course of human-biometeorological comfort assessment — the mean radiant temperature." Central European Journal of Geosciences, 3(1), 90-100.
-   https://doi.org/10.2478/s13533-011-0010-x
+## Source Files
 
-4. World Meteorological Organization (2017). "International Cloud Atlas." WMO-No. 407.
-   https://cloudatlas.wmo.int/en/home.html
+### `src/ride_distribution.py`
+Analyzes the distribution of Citibike rides across different time periods. Creates visualizations showing daily ride counts, hourly patterns, and yearly trends. Outputs statistics on ride patterns to the results directory.
+
+### `src/preprocess_weather.py`
+Processes raw weather data, including parsing sky cover codes, calculating mean radiant temperature (MRT), and computing the Universal Thermal Climate Index (UTCI). Implements weather categorization based on UTCI values and precipitation data.
+
+### `src/weather_distribution.py`
+Analyzes the distribution of weather conditions in New York City. Creates visualizations of temperature, humidity, wind speed, and other weather metrics over time.
+
+### `src/weather_impact_analysis.py`
+Examines the relationship between weather conditions and Citibike ridership. Analyzes how factors like temperature, precipitation, and thermal comfort affect ride counts.
+
+### `src/ride_weather_distribution.py`
+Combines ride data with weather data to create joint distributions and correlation analyses. Visualizes how ridership varies with different weather conditions.
+
+### `src/combine_weather_citibike.py`
+Merges processed weather data with Citibike ride data to create a unified dataset for analysis.
+
+### `src/combine_years_to_parquet.py`
+Combines Citibike data from multiple years into consolidated Parquet files for efficient storage and analysis.
+
+### `src/view_parquet.py`
+Utility script to quickly view and explore the contents of Parquet files.
+
+### `src/proccess_detailed_csv.py`
+Processes detailed CSV data files with additional metrics and converts them to a standardized format.
+
+### `src/psv_to_csv.py`
+Converts pipe-separated value (PSV) files to CSV format for easier processing.
+
+### `src/dly_to_csv.py`
+Converts weather data in DLY format to CSV format for analysis.
+
+### `src/read_dly.py`
+Utility functions for reading and parsing weather data in DLY format.
+
+## UTCI Calculation
+
+The project uses the Universal Thermal Climate Index (UTCI) to assess thermal comfort. The calculation methodology is documented in `UTCI_calculation.md`, which explains the simplified approach for calculating Mean Radiant Temperature (MRT) used in the weather analysis.
+
+## Results
+
+Analysis results, including visualizations and data summaries, are stored in the `results/` directory, organized by analysis type. 

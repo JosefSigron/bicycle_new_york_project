@@ -173,14 +173,38 @@ def calculate_utci(temperature, wind_speed, humidity, mrt):
     mrt: Mean radiant temperature in °C
     
     Returns:
-    UTCI value in °C
+    UTCI value in °C or NaN if calculation fails
     """
     from pythermalcomfort.models import utci
     
-    # Calculate UTCI using the pythermalcomfort library
-    utci_value = utci(tdb=temperature, tr=mrt, v=wind_speed, rh=humidity)
-    
-    return utci_value
+    # Check for invalid or missing input values
+    if (pd.isna(temperature) or pd.isna(wind_speed) or 
+        pd.isna(humidity) or pd.isna(mrt)):
+        return np.nan
+        
+    try:
+        # Ensure values are within valid ranges for UTCI calculation
+        # Pythermalcomfort has valid ranges for each parameter
+        
+        # Air temperature range: -50°C to 50°C 
+        if temperature < -50 or temperature > 50:
+            return np.nan
+            
+        # Wind speed range: 0.5 to 17 m/s
+        # Adjust wind speed to be within valid range
+        v_adjusted = max(0.5, min(17, wind_speed))
+            
+        # Relative humidity range: 5% to 100%
+        rh_adjusted = max(5, min(100, humidity))
+            
+        # Calculate UTCI using the pythermalcomfort library
+        utci_value = utci(tdb=temperature, tr=mrt, v=v_adjusted, rh=rh_adjusted)
+        
+        return utci_value
+    except Exception as e:
+        # Log the error if needed
+        print(f"Error calculating UTCI: {e}, temp={temperature}, wind={wind_speed}, rh={humidity}, mrt={mrt}")
+        return np.nan
 
 def categorize_utci(utci_value):
     """
@@ -192,6 +216,10 @@ def categorize_utci(utci_value):
     Returns:
     Category string
     """
+    # Handle null values
+    if pd.isna(utci_value):
+        return "Unknown"
+        
     if utci_value < -40:
         return "Extreme cold stress"
     elif utci_value < -27:
@@ -225,6 +253,16 @@ def categorize_weather(utci, rain, snow):
     Returns:
     Weather category string
     """
+    # Handle the case where UTCI is null
+    if pd.isna(utci):
+        if snow == 1:
+            return "Snow"
+        elif rain == 1:
+            return "Rain"
+        else:
+            return "Unknown"  # We can't determine thermal category without UTCI
+    
+    # Normal categorization when UTCI is available
     if snow == 1:
         return "Snow"
     elif rain == 1:
@@ -447,6 +485,12 @@ def main():
     remaining_missing = df[fill_columns].isna().sum().sum()
     if remaining_missing > 0:
         print(f"Warning: {remaining_missing} values still missing after 3-month average filling")
+        
+        # Fill any remaining missing values with global means
+        for column in fill_columns:
+            if df[column].isna().sum() > 0:
+                print(f"  - Filling {df[column].isna().sum()} remaining missing {column} values with global mean")
+                df[column] = df[column].fillna(df[column].mean())
     
     # Calculate MRT using the simplified method
     df = calculate_mean_radiant_temperature(df)
@@ -458,6 +502,18 @@ def main():
         row['wind_speed'], 
         row['relative_humidity'], 
         row['mean_radiant_temp']), axis=1)
+    
+    # Report on null UTCI values
+    null_utci_count = df['utci'].isna().sum()
+    if null_utci_count > 0:
+        print(f"Warning: {null_utci_count} null UTCI values ({null_utci_count/len(df)*100:.2f}% of data)")
+        
+        # Sample a few rows with null UTCI to help diagnose the issue
+        print("\nSample rows with null UTCI values:")
+        sample_nulls = df[df['utci'].isna()].head(3)
+        for idx, row in sample_nulls.iterrows():
+            print(f"Row {idx}: temp={row['temperature']}, wind={row['wind_speed']}, " +
+                  f"rh={row['relative_humidity']}, mrt={row['mean_radiant_temp']}")
     
     # Add UTCI category column
     print("Categorizing UTCI values...")
@@ -491,6 +547,8 @@ def main():
     
     row_count = len(df)
     print(f"Done! UTCI values have been calculated and saved for all {row_count} rows.")
+    print(f"  - {row_count - null_utci_count} rows with valid UTCI values")
+    print(f"  - {null_utci_count} rows with null UTCI values")
 
 if __name__ == "__main__":
     main() 

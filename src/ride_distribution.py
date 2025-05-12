@@ -250,6 +250,63 @@ def plot_daily_rides(yearly_stats, plots_dir):
     plt.savefig(plots_dir / 'ride_distribution_by_year.png', dpi=300)
     plt.close()
 
+def plot_rides_per_bike(stats_df, plots_dir):
+    """
+    Create a plot showing ride distribution based on the number of bikes each year.
+    """
+    # Number of bikes per year
+    bikes_per_year = {
+        '2019': 12000,
+        '2020': 17000,
+        '2021': 20000,
+        '2022': 25000,
+        '2023': 30000,
+        '2024': 40000
+    }
+    
+    # Create a copy of stats_df to work with
+    plot_df = stats_df.copy()
+    
+    # Add bikes count and calculate rides per bike
+    plot_df['bikes_count'] = plot_df['year'].map(bikes_per_year)
+    plot_df['total_rides_per_bike'] = plot_df['total_rides'] / plot_df['bikes_count']
+    plot_df['median_daily_rides_per_bike'] = plot_df['median_daily_rides'] / plot_df['bikes_count']
+    
+    # Create the figure with two subplots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 8))
+    
+    # Plot 1: Total rides per bike
+    bars1 = ax1.bar(plot_df['year'], plot_df['total_rides_per_bike'], color='#1f77b4')
+    ax1.set_title('Total Annual Rides per Bike', fontsize=16)
+    ax1.set_xlabel('Year', fontsize=14)
+    ax1.set_ylabel('Rides per Bike', fontsize=14)
+    ax1.grid(axis='y', linestyle='--', alpha=0.7)
+    
+    # Add value labels on top of bars
+    for bar in bars1:
+        height = bar.get_height()
+        ax1.text(bar.get_x() + bar.get_width()/2., height + 5,
+                f'{int(height):,}',
+                ha='center', va='bottom', fontsize=10)
+    
+    # Plot 2: Median daily rides per bike
+    bars2 = ax2.bar(plot_df['year'], plot_df['median_daily_rides_per_bike'], color='#2ca02c')
+    ax2.set_title('Median Daily Rides per Bike', fontsize=16)
+    ax2.set_xlabel('Year', fontsize=14)
+    ax2.set_ylabel('Rides per Bike', fontsize=14)
+    ax2.grid(axis='y', linestyle='--', alpha=0.7)
+    
+    # Add value labels on top of bars
+    for bar in bars2:
+        height = bar.get_height()
+        ax2.text(bar.get_x() + bar.get_width()/2., height + 0.2,
+                f'{height:.1f}',
+                ha='center', va='bottom', fontsize=10)
+    
+    plt.tight_layout()
+    plt.savefig(plots_dir / 'rides_per_bike.png', dpi=300)
+    plt.close()
+
 def main():
     print("Starting Citibike ride analysis...")
     
@@ -269,6 +326,7 @@ def main():
     # Create plots
     plot_daily_rides(yearly_stats, plots_dir)
     plot_hourly_distribution(hourly_df, plots_dir)
+    plot_rides_per_bike(stats_df, plots_dir)
     
     print("\nAnalysis complete! Plots have been saved to 'results/ride_distribution/plots' directory.")
 

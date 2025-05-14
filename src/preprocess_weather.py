@@ -241,14 +241,15 @@ def categorize_utci(utci_value):
     else:
         return "Extreme heat stress"
 
-def categorize_weather(utci, rain, snow):
+def categorize_weather(utci, rain, snow, mist_fog=0):
     """
-    Categorize weather based on utci, rain and snow
+    Categorize weather based on utci, rain, snow, and mist/fog
     
     Parameters:
     utci: UTCI value in °C
     rain: Rain value (0 or 1)
     snow: Snow value (0 or 1)
+    mist_fog: Mist/Fog value (0 or 1)
     
     Returns:
     Weather category string
@@ -259,6 +260,8 @@ def categorize_weather(utci, rain, snow):
             return "Snow"
         elif rain == 1:
             return "Rain"
+        elif mist_fog == 1:
+            return "Mist/Fog"
         else:
             return "Unknown"  # We can't determine thermal category without UTCI
     
@@ -267,6 +270,8 @@ def categorize_weather(utci, rain, snow):
         return "Snow"
     elif rain == 1:
         return "Rain"
+    elif mist_fog == 1:
+        return "Mist/Fog"
     elif utci < 9:
         return "Cold"
     elif utci > 26:
@@ -323,9 +328,9 @@ def fill_missing_with_3month_avg(df, columns):
     
     return df
 
-def detect_rain_and_snow(df):
+def detect_weather_conditions(df):
     """
-    Add rain and snow columns based on present weather codes
+    Add rain, snow, and mist/fog columns based on present weather codes
     
     Rain: 
     - If any of pres_wx_AW, pres_wx_MW contains codes 23, 25, 50-69, 80-84, 91-99
@@ -335,38 +340,52 @@ def detect_rain_and_snow(df):
     - If any of pres_wx_AW, pres_wx_MW contains codes 24, 27-29, 68-79, 83-88, 93, 94
     - If any of pres_wx_AU contains codes 03, 04
     
+    Mist/Fog:
+    - If any of pres_wx_MW contains codes 11, 12, 28, 40-49
+    - If any of pres_wx_AW contains codes 10, 20, 30-35
+    - If any of pres_wx_AU contains codes BG:1, FG:2
+    
     Parameters:
     df: DataFrame with present weather columns
     
     Returns:
-    DataFrame with added rain and snow columns
+    DataFrame with added rain, snow, and mist_fog columns
     """
-    print("Detecting rain and snow events...")
+    print("Detecting weather conditions (rain, snow, mist/fog)...")
     
     # Ensure present weather columns are strings to search within them
-    wx_mw_aw_columns = ['pres_wx_AW1', 'pres_wx_AW2', 'pres_wx_AW3', 'pres_wx_MW1', 'pres_wx_MW2', 'pres_wx_MW3']
+    wx_mw_columns = ['pres_wx_MW1', 'pres_wx_MW2', 'pres_wx_MW3']
+    wx_aw_columns = ['pres_wx_AW1', 'pres_wx_AW2', 'pres_wx_AW3']
     wx_au_columns = ['pres_wx_AU1', 'pres_wx_AU2', 'pres_wx_AU3']
-    all_wx_columns = wx_mw_aw_columns + wx_au_columns
+    all_wx_columns = wx_mw_columns + wx_aw_columns + wx_au_columns
     
     for col in all_wx_columns:
         if col in df.columns:
             df[col] = df[col].astype(str)
     
-    # Initialize rain and snow columns
+    # Initialize rain, snow, and mist/fog columns
     df['rain'] = 0
     df['snow'] = 0
+    df['mist_fog'] = 0
     
     # Define rain and snow codes for MW and AW columns
     mw_aw_rain_codes = [23, 25] + list(range(50, 70)) + list(range(80, 85)) + list(range(91, 100))
     mw_aw_snow_codes = [24] + list(range(27, 30)) + list(range(68, 80)) + list(range(83, 89)) + [93, 94]
     
+    # Define mist/fog codes
+    mw_mist_fog_codes = [11, 12, 28] + list(range(40, 50))
+    aw_mist_fog_codes = [10, 20] + list(range(30, 36))
+    
     # Define rain and snow codes for AU columns
     au_rain_codes = ['01', '02']
     au_snow_codes = ['03', '04']
+    au_mist_fog_codes = ['BG:1', 'FG:2']
     
     # Convert codes to strings for pattern matching
     mw_aw_rain_codes_str = [str(code) for code in mw_aw_rain_codes]
     mw_aw_snow_codes_str = [str(code) for code in mw_aw_snow_codes]
+    mw_mist_fog_codes_str = [str(code) for code in mw_mist_fog_codes]
+    aw_mist_fog_codes_str = [str(code) for code in aw_mist_fog_codes]
     
     # Create functions to check if a cell contains any of the target codes
     def contains_mw_aw_code(cell_value, code_list):
@@ -389,7 +408,7 @@ def detect_rain_and_snow(df):
         if pd.isna(cell_value) or cell_value == 'nan':
             return False
         
-        # Handle formats like "-RA:02", "+SN:03", "DZ:01", "SG:04"
+        # Handle formats like "-RA:02", "+SN:03", "DZ:01", "SG:04", "BG:1", "FG:2"
         # We need to check for specific weather types with specific codes
         
         # Define patterns for each code
@@ -397,7 +416,9 @@ def detect_rain_and_snow(df):
             '01': ['DZ:01'],  # Drizzle
             '02': ['RA:02'],  # Rain
             '03': ['SN:03'],  # Snow
-            '04': ['SG:04']   # Snow grains
+            '04': ['SG:04'],   # Snow grains
+            'BG:1': ['BG:1'],  # Mist
+            'FG:2': ['FG:2']   # Fog
         }
         
         # Check for each code we're looking for
@@ -410,53 +431,72 @@ def detect_rain_and_snow(df):
         
         return False
     
-    # Check MW and AW columns
-    for col in wx_mw_aw_columns:
+    # Check MW columns for rain, snow, and mist/fog
+    for col in wx_mw_columns:
         if col in df.columns:
             # Apply the function to each row
             df['has_rain_code'] = df[col].apply(lambda x: contains_mw_aw_code(x, mw_aw_rain_codes_str))
             df['has_snow_code'] = df[col].apply(lambda x: contains_mw_aw_code(x, mw_aw_snow_codes_str))
+            df['has_mist_fog_code'] = df[col].apply(lambda x: contains_mw_aw_code(x, mw_mist_fog_codes_str))
             
-            # Update rain and snow columns
+            # Update columns
             df.loc[df['has_rain_code'], 'rain'] = 1
             df.loc[df['has_snow_code'], 'snow'] = 1
+            df.loc[df['has_mist_fog_code'], 'mist_fog'] = 1
     
-    # Check AU columns
+    # Check AW columns for rain, snow, and mist/fog
+    for col in wx_aw_columns:
+        if col in df.columns:
+            # Apply the function to each row
+            df['has_rain_code'] = df[col].apply(lambda x: contains_mw_aw_code(x, mw_aw_rain_codes_str))
+            df['has_snow_code'] = df[col].apply(lambda x: contains_mw_aw_code(x, mw_aw_snow_codes_str))
+            df['has_mist_fog_code'] = df[col].apply(lambda x: contains_mw_aw_code(x, aw_mist_fog_codes_str))
+            
+            # Update columns
+            df.loc[df['has_rain_code'], 'rain'] = 1
+            df.loc[df['has_snow_code'], 'snow'] = 1
+            df.loc[df['has_mist_fog_code'], 'mist_fog'] = 1
+    
+    # Check AU columns for rain, snow, and mist/fog
     for col in wx_au_columns:
         if col in df.columns:
             # Apply the function to each row
             df['has_rain_code'] = df[col].apply(lambda x: contains_au_code(x, au_rain_codes))
             df['has_snow_code'] = df[col].apply(lambda x: contains_au_code(x, au_snow_codes))
+            df['has_mist_fog_code'] = df[col].apply(lambda x: contains_au_code(x, au_mist_fog_codes))
             
-            # Update rain and snow columns
+            # Update columns
             df.loc[df['has_rain_code'], 'rain'] = 1
             df.loc[df['has_snow_code'], 'snow'] = 1
+            df.loc[df['has_mist_fog_code'], 'mist_fog'] = 1
     
     # Clean up temporary columns
-    if 'has_rain_code' in df.columns:
-        df.drop(['has_rain_code', 'has_snow_code'], axis=1, inplace=True)
+    temp_cols = ['has_rain_code', 'has_snow_code', 'has_mist_fog_code']
+    df.drop([col for col in temp_cols if col in df.columns], axis=1, inplace=True)
     
     # Print counts
     rain_count = df['rain'].sum()
     snow_count = df['snow'].sum()
-    print(f"Detected {rain_count} rain events and {snow_count} snow events")
+    mist_fog_count = df['mist_fog'].sum()
+    print(f"Detected {rain_count} rain events, {snow_count} snow events, and {mist_fog_count} mist/fog events")
     
-    # Sample a few rows with rain or snow for validation
-    if rain_count > 0 or snow_count > 0:
-        print("\nSample rows with detected precipitation:")
+    # Sample a few rows with precipitation or mist/fog for validation
+    if rain_count > 0 or snow_count > 0 or mist_fog_count > 0:
+        print("\nSample rows with detected weather conditions:")
         sample_rain = df[df['rain'] == 1].head(2)
         sample_snow = df[df['snow'] == 1].head(2)
+        sample_mist_fog = df[df['mist_fog'] == 1].head(2)
         
-        for sample, precip_type in [(sample_rain, "Rain"), (sample_snow, "Snow")]:
+        for sample, condition_type in [(sample_rain, "Rain"), (sample_snow, "Snow"), (sample_mist_fog, "Mist/Fog")]:
             if not sample.empty:
-                print(f"\n{precip_type} samples:")
+                print(f"\n{condition_type} samples:")
                 for idx, row in sample.iterrows():
                     weather_info = []
                     for col in all_wx_columns:
                         if col in df.columns and not pd.isna(row[col]) and row[col] != 'nan':
                             weather_info.append(f"{col}={row[col]}")
                     weather_str = ", ".join(weather_info)
-                    print(f"Row {idx}: Rain={row['rain']}, Snow={row['snow']}, Weather: {weather_str}")
+                    print(f"Row {idx}: Rain={row['rain']}, Snow={row['snow']}, Mist/Fog={row['mist_fog']}, Weather: {weather_str}")
     
     return df
 
@@ -520,21 +560,22 @@ def main():
     df['utci_cat'] = df['utci'].apply(categorize_utci)
     
     # Add rain and snow columns
-    df = detect_rain_and_snow(df)
+    df = detect_weather_conditions(df)
     
     # Add weather category column
     print("Categorizing weather...")
     df['weather_cat'] = df.apply(lambda row: categorize_weather(
         row['utci'], 
         row['rain'], 
-        row['snow']), axis=1)
+        row['snow'],
+        row['mist_fog']), axis=1)
     
     # Save the result
     print("Saving results...")
     output_columns = [
         'datetime', 'temperature', 'wind_speed', 'relative_humidity', 
         'cloud_cover', 'mean_radiant_temp', 'precipitation',
-        'utci', 'utci_cat', 'rain', 'snow', 'weather_cat',
+        'utci', 'utci_cat', 'rain', 'snow', 'mist_fog', 'weather_cat',
         'sky_cover_1', 'sky_cover_2', 'sky_cover_3',
         'pres_wx_AW1', 'pres_wx_AW2', 'pres_wx_AW3',
         'pres_wx_MW1', 'pres_wx_MW2', 'pres_wx_MW3',

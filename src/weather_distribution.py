@@ -272,3 +272,122 @@ plt.subplots_adjust(bottom=0.1)
 plt.savefig('results/weather_distribution/utci_category_by_hour_seasonal.png', dpi=300, bbox_inches='tight')
 
 print("Analysis complete. Visualization images saved.")
+
+# Print unique weather categories to check what's in the data
+print("Unique Weather Categories:", sorted(df['weather_cat'].unique().tolist()))
+
+# Create a new figure for weather category distribution by hour
+fig, axes = plt.subplots(2, 2, figsize=(30, 24))
+axes = axes.flatten()  # Flatten the 2x2 array to make indexing easier
+
+# Create subplots for each season
+seasons = ['Winter', 'Spring', 'Summer', 'Fall']
+season_months = {
+    'Winter': [12, 1, 2],
+    'Spring': [3, 4, 5],
+    'Summer': [6, 7, 8],
+    'Fall': [9, 10, 11]
+}
+
+# Create a custom color map for weather categories
+custom_colors = {
+    'Cold': '#4444FF',        # Blue
+    'Neutral': '#00CC00',     # Green
+    'Heat': '#FF8800',        # Orange
+    'Rain': '#4682B4',        # Steel blue
+    'Snow': '#FFFFFF',        # White
+    'Mist/Fog': '#CCCCCC',    # Light gray
+    'Unknown': '#A9A9A9'      # Dark gray
+}
+
+# Hatches for accessibility - match them to the proper category names
+hatches = {
+    'Cold': '\\',
+    'Neutral': '*',
+    'Heat': '+',
+    'Rain': '|',
+    'Snow': 'o',
+    'Mist/Fog': '-',
+    'Unknown': '.'
+}
+
+# Find all unique weather categories across the entire dataset
+all_categories = df['weather_cat'].unique().tolist()
+
+# Define the correct order from coldest to hottest
+weather_order = [
+    'Snow',
+    'Rain',
+    'Mist/Fog',
+    'Cold',
+    'Neutral',
+    'Heat',
+    'Unknown'
+]
+
+# Filter and sort the categories based on the weather order
+ordered_categories = [cat for cat in weather_order if cat in all_categories]
+print("Weather categories in order:", ordered_categories)
+
+for idx, season in enumerate(seasons):
+    # Filter data for the current season
+    season_df = df[df['month'].isin(season_months[season])]
+    
+    # Calculate distribution of weather categories by hour
+    hourly_weather_dist = season_df.groupby(['hour', 'weather_cat']).size().unstack(fill_value=0)
+    
+    # Create stacked bar plot with wider bars on the specific subplot
+    ax = axes[idx]
+    
+    # Get the categories present in this season and sort them by our defined order
+    categories = hourly_weather_dist.columns.tolist()
+    categories_ordered = [cat for cat in ordered_categories if cat in categories]
+    
+    # For each hour and category, plot with specific color and hatch pattern
+    bottom = np.zeros(len(hourly_weather_dist.index))
+    
+    # Plot in weather order
+    for cat in categories_ordered:
+        values = hourly_weather_dist[cat].values
+        # Use weather-appropriate color and hatch
+        color = custom_colors.get(cat, 'gray')  # Use gray as last resort
+        hatch = hatches.get(cat, '')  # Default to no hatch if not found
+        
+        ax.bar(hourly_weather_dist.index, values, bottom=bottom, 
+               width=0.8, label=cat if idx == 0 else "", 
+               color=color, hatch=hatch)
+        bottom += values
+    
+    ax.set_title(f'Distribution of Weather Categories by Hour of Day - {season}', 
+                fontsize=24)
+    ax.set_xlabel('Hour of Day', fontsize=20)
+    ax.set_ylabel('Number of Records', fontsize=20)
+    ax.grid(True, axis='y')
+    ax.tick_params(axis='both', labelsize=18)
+    ax.set_xticks(range(24))
+    ax.set_xticklabels(range(24))
+
+# Add a single legend for the entire figure, position it below the plots
+# Create a custom legend with all categories in weather order
+handles = []
+labels = []
+
+# Create dummy patches for the legend in weather order
+for cat in ordered_categories:
+    if cat in all_categories:  # Only include categories that exist in the data
+        color = custom_colors.get(cat, 'gray')
+        hatch = hatches.get(cat, '')
+        handle = plt.Rectangle((0,0), 1, 1, facecolor=color, hatch=hatch)
+        handles.append(handle)
+        labels.append(cat)
+
+fig.legend(handles, labels, title='Weather Category', 
+           loc='lower center', bbox_to_anchor=(0.5, 0.02),
+           fontsize=20, title_fontsize=24, ncol=min(len(labels), 4))
+
+plt.tight_layout()
+# Adjust the bottom margin to make room for the legend but reduce the gap
+plt.subplots_adjust(bottom=0.1)
+plt.savefig('results/weather_distribution/weather_category_by_hour_seasonal.png', dpi=300, bbox_inches='tight')
+
+print("Analysis complete. Visualization images saved.")

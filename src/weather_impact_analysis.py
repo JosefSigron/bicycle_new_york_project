@@ -145,10 +145,6 @@ def identify_regions(df):
         'Bronx': {
             'lat_min': 40.7855, 'lat_max': 40.9156,
             'long_min': -73.9338, 'long_max': -73.7652
-        },
-        'Staten_Island': {
-            'lat_min': 40.4960, 'lat_max': 40.6490,
-            'long_min': -74.2557, 'long_max': -74.0522
         }
     }
     
@@ -199,10 +195,16 @@ def create_user_type_visualization(result):
     # Filter out the Neutral weather category (it will always be 0)
     plot_data = result[result['weather_cat'] != 'Neutral'].copy()
     
-    # Use a more muted color palette
-    sns.set_palette("muted")
+    # Use a more muted color palette with enough colors for all weather categories
+    # (Rain, Snow, Cold, Heat, Mist/Fog)
+    sns.set_palette("muted", n_colors=max(5, len(plot_data['weather_cat'].unique())))
     
-    chart = sns.barplot(x='weather_cat', y='change_from_neutral', hue='user_type', data=plot_data)
+    # Order the weather categories in a logical way
+    weather_order = ['Cold', 'Mist/Fog', 'Rain', 'Snow', 'Heat']
+    # Filter to only include categories that exist in the data
+    weather_order = [cat for cat in weather_order if cat in plot_data['weather_cat'].unique()]
+    
+    chart = sns.barplot(x='weather_cat', y='change_from_neutral', hue='user_type', data=plot_data, order=weather_order)
     plt.axhline(y=0, color='black', linestyle='-', alpha=0.3)
     plt.title('Percentage Change in Rides Compared to Neutral Weather by User Type', fontsize=26)
     plt.xlabel('Weather Category', fontsize=24)
@@ -225,10 +227,16 @@ def create_region_visualization(result):
     # Filter out the Neutral weather category (it will always be 0)
     plot_data = result[result['weather_cat'] != 'Neutral'].copy()
     
-    # Use a colorblind color palette - with enough distinct colors for boroughs
-    palette = sns.color_palette("colorblind", n_colors=5)  # 5 colors for 5 boroughs
+    # Use a colorblind color palette with enough distinct colors for boroughs
+    palette = sns.color_palette("colorblind", n_colors=max(5, len(plot_data['region'].unique())))
     
-    chart = sns.barplot(x='weather_cat', y='change_from_neutral', hue='region', data=plot_data, palette=palette)
+    # Order the weather categories in a logical way
+    weather_order = ['Cold', 'Mist/Fog', 'Rain', 'Snow', 'Heat']
+    # Filter to only include categories that exist in the data
+    weather_order = [cat for cat in weather_order if cat in plot_data['weather_cat'].unique()]
+    
+    chart = sns.barplot(x='weather_cat', y='change_from_neutral', hue='region', data=plot_data, 
+                       palette=palette, order=weather_order)
     plt.axhline(y=0, color='black', linestyle='-', alpha=0.3)
     plt.title('Percentage Change in Rides Compared to Neutral Weather by Region', fontsize=26)
     plt.xlabel('Weather Category', fontsize=24)

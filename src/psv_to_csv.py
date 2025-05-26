@@ -48,7 +48,7 @@ def psv_to_csv(input_file, output_file=None):
 def main():
     # Check if correct number of arguments is provided
     if len(sys.argv) < 2:
-        print("Usage: python psv_to_csv.py <input_psv_file> [output_csv_file]")
+        print("Usage: python src/psv_to_csv.py <input_psv_file> [output_csv_file]")
         sys.exit(1)
     
     input_file = sys.argv[1]

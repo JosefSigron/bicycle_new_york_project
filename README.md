@@ -73,6 +73,9 @@ Converts weather data in DLY format to CSV format for analysis.
 ### `src/read_dly.py`
 Utility functions for reading and parsing weather data in DLY format.
 
+### `src/manhattan_analysis.py`
+Analyzes Citibike data specifically for the Manhattan area. Filters rides starting in Manhattan, divides the borough into regions (Downtown, Midtown, Central Park Area, Upper), and performs regional analysis on trip durations, origins/destinations, popular stations, temporal patterns, and user types.
+
 ## UTCI Calculation
 
 The project uses the Universal Thermal Climate Index (UTCI) to assess thermal comfort. The calculation methodology is documented in `UTCI_calculation.md`, which explains the simplified approach for calculating Mean Radiant Temperature (MRT) used in the weather analysis.

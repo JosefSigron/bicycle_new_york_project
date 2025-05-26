@@ -7,6 +7,9 @@ from pathlib import Path
 import argparse
 import matplotlib.colors as mcolors
 
+#IMPORTANT: Don't run this unless completely necessary. It takes a long time to run and freezes the computer.
+
+
 # Increase font sizes for better readability
 plt.rcParams.update({
     'font.size': 14,
@@ -37,15 +40,15 @@ utci_categories = {
 
 # Define color mapping for UTCI categories - blue for cold, red for hot
 utci_colors = {
-    'extreme_cold_stress': '#0022FF',      # Deep blue
-    'very_strong_cold_stress': '#0066FF',  # Strong blue
-    'strong_cold_stress': '#0099FF',       # Medium blue
-    'moderate_cold_stress': '#66CCFF',     # Light blue
-    'slight_cold_stress': '#99DDFF',       # Very light blue
-    'no_thermal_stress': '#AAFF99',        # Light green
-    'moderate_heat_stress': '#FFDD99',     # Light orange
-    'strong_heat_stress': '#FF9966',       # Orange
-    'very_strong_heat_stress': '#FF5500',  # Bright orange
+    'extreme_cold_stress': '#0000FF',      # Deep blue
+    'very_strong_cold_stress': '#1E90FF',  # Dodger blue
+    'strong_cold_stress': '#4169E1',       # Royal blue
+    'moderate_cold_stress': '#6495ED',     # Cornflower blue
+    'slight_cold_stress': '#87CEEB',       # Sky blue
+    'no_thermal_stress': '#32CD32',        # Lime green
+    'moderate_heat_stress': '#FFA07A',     # Light salmon
+    'strong_heat_stress': '#FF6347',       # Tomato
+    'very_strong_heat_stress': '#FF4500',  # Orange red
     'extreme_heat_stress': '#FF0000'       # Red
 }
 

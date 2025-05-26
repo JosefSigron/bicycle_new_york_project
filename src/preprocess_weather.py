@@ -501,95 +501,120 @@ def detect_weather_conditions(df):
     return df
 
 def main():
-    # Load the data
-    print("Loading data...")
-    df = pd.read_csv('data/weather/csv/combined_weather_nyc.csv', low_memory=False)
+    # List of boroughs to process
+    boroughs = ['manhattan', 'bronx', 'brooklyn', 'queens']
+    
+    for borough in boroughs:
+        print(f"\n{'='*60}")
+        print(f"PROCESSING {borough.upper()}")
+        print(f"{'='*60}")
+        
+        # Load the data for this borough
+        input_file = f'data/weather/csv/combined_weather_{borough}.csv'
+        print(f"Loading data from {input_file}...")
+        
+        try:
+            df = pd.read_csv(input_file, low_memory=False)
+        except FileNotFoundError:
+            print(f"Error: File {input_file} not found. Skipping {borough}.")
+            continue
+        
+        print(f"Loaded {len(df)} rows for {borough}")
 
-    # Convert columns to numeric
-    print("Processing data...")
-    df['temperature'] = pd.to_numeric(df['temperature'], errors='coerce')
-    df['wind_speed'] = pd.to_numeric(df['wind_speed'], errors='coerce')
-    df['relative_humidity'] = pd.to_numeric(df['relative_humidity'], errors='coerce')
-    
-    # Convert date to datetime
-    df['datetime'] = pd.to_datetime(df['DATE'])
-    
-    # Parse sky cover data to get cloud cover fraction
-    df = parse_sky_cover(df)
-    
-    # Fill missing values with 3-month averages
-    fill_columns = ['temperature', 'wind_speed', 'relative_humidity']
-    df = fill_missing_with_3month_avg(df, fill_columns)
-    
-    # Handle any remaining missing values
-    remaining_missing = df[fill_columns].isna().sum().sum()
-    if remaining_missing > 0:
-        print(f"Warning: {remaining_missing} values still missing after 3-month average filling")
+        # Convert columns to numeric
+        print("Processing data...")
+        df['temperature'] = pd.to_numeric(df['temperature'], errors='coerce')
+        df['wind_speed'] = pd.to_numeric(df['wind_speed'], errors='coerce')
+        df['relative_humidity'] = pd.to_numeric(df['relative_humidity'], errors='coerce')
         
-        # Fill any remaining missing values with global means
-        for column in fill_columns:
-            if df[column].isna().sum() > 0:
-                print(f"  - Filling {df[column].isna().sum()} remaining missing {column} values with global mean")
-                df[column] = df[column].fillna(df[column].mean())
-    
-    # Calculate MRT using the simplified method
-    df = calculate_mean_radiant_temperature(df)
-    
-    # Apply the UTCI calculation
-    print("Computing UTCI values...")
-    df['utci'] = df.apply(lambda row: calculate_utci(
-        row['temperature'], 
-        row['wind_speed'], 
-        row['relative_humidity'], 
-        row['mean_radiant_temp']), axis=1)
-    
-    # Report on null UTCI values
-    null_utci_count = df['utci'].isna().sum()
-    if null_utci_count > 0:
-        print(f"Warning: {null_utci_count} null UTCI values ({null_utci_count/len(df)*100:.2f}% of data)")
+        # Convert date to datetime
+        df['datetime'] = pd.to_datetime(df['DATE'])
         
-        # Sample a few rows with null UTCI to help diagnose the issue
-        print("\nSample rows with null UTCI values:")
-        sample_nulls = df[df['utci'].isna()].head(3)
-        for idx, row in sample_nulls.iterrows():
-            print(f"Row {idx}: temp={row['temperature']}, wind={row['wind_speed']}, " +
-                  f"rh={row['relative_humidity']}, mrt={row['mean_radiant_temp']}")
+        # Parse sky cover data to get cloud cover fraction
+        df = parse_sky_cover(df)
+        
+        # Fill missing values with 3-month averages
+        fill_columns = ['temperature', 'wind_speed', 'relative_humidity']
+        df = fill_missing_with_3month_avg(df, fill_columns)
+        
+        # Handle any remaining missing values
+        remaining_missing = df[fill_columns].isna().sum().sum()
+        if remaining_missing > 0:
+            print(f"Warning: {remaining_missing} values still missing after 3-month average filling")
+            
+            # Fill any remaining missing values with global means
+            for column in fill_columns:
+                if df[column].isna().sum() > 0:
+                    print(f"  - Filling {df[column].isna().sum()} remaining missing {column} values with global mean")
+                    df[column] = df[column].fillna(df[column].mean())
+        
+        # Calculate MRT using the simplified method
+        df = calculate_mean_radiant_temperature(df)
+        
+        # Apply the UTCI calculation
+        print("Computing UTCI values...")
+        df['utci'] = df.apply(lambda row: calculate_utci(
+            row['temperature'], 
+            row['wind_speed'], 
+            row['relative_humidity'], 
+            row['mean_radiant_temp']), axis=1)
+        
+        # Report on null UTCI values
+        null_utci_count = df['utci'].isna().sum()
+        if null_utci_count > 0:
+            print(f"Warning: {null_utci_count} null UTCI values ({null_utci_count/len(df)*100:.2f}% of data)")
+            
+            # Sample a few rows with null UTCI to help diagnose the issue
+            print("\nSample rows with null UTCI values:")
+            sample_nulls = df[df['utci'].isna()].head(3)
+            for idx, row in sample_nulls.iterrows():
+                print(f"Row {idx}: temp={row['temperature']}, wind={row['wind_speed']}, " +
+                      f"rh={row['relative_humidity']}, mrt={row['mean_radiant_temp']}")
+        
+        # Add UTCI category column
+        print("Categorizing UTCI values...")
+        df['utci_cat'] = df['utci'].apply(categorize_utci)
+        
+        # Add rain and snow columns
+        df = detect_weather_conditions(df)
+        
+        # Add weather category column
+        print("Categorizing weather...")
+        df['weather_cat'] = df.apply(lambda row: categorize_weather(
+            row['utci'], 
+            row['rain'], 
+            row['snow'],
+            row['mist_fog']), axis=1)
+        
+        # Save the result for this borough
+        output_file = f'data/weather/csv/{borough}_weather_with_utci.csv'
+        print(f"Saving results to {output_file}...")
+        
+        output_columns = [
+            'datetime', 'temperature', 'wind_speed', 'relative_humidity', 
+            'cloud_cover', 'mean_radiant_temp', 'precipitation',
+            'utci', 'utci_cat', 'rain', 'snow', 'mist_fog', 'weather_cat',
+            'sky_cover_1', 'sky_cover_2', 'sky_cover_3',
+            'pres_wx_AW1', 'pres_wx_AW2', 'pres_wx_AW3',
+            'pres_wx_MW1', 'pres_wx_MW2', 'pres_wx_MW3',
+            'pres_wx_AU1', 'pres_wx_AU2', 'pres_wx_AU3'
+        ]
+        
+        # Only include columns that exist in the dataframe
+        output_columns = [col for col in output_columns if col in df.columns]
+        df[output_columns].to_csv(output_file, index=False)
+        
+        row_count = len(df)
+        print(f"Done! UTCI values calculated and saved for {borough}: {row_count} rows.")
+        print(f"  - {row_count - null_utci_count} rows with valid UTCI values")
+        print(f"  - {null_utci_count} rows with null UTCI values")
     
-    # Add UTCI category column
-    print("Categorizing UTCI values...")
-    df['utci_cat'] = df['utci'].apply(categorize_utci)
-    
-    # Add rain and snow columns
-    df = detect_weather_conditions(df)
-    
-    # Add weather category column
-    print("Categorizing weather...")
-    df['weather_cat'] = df.apply(lambda row: categorize_weather(
-        row['utci'], 
-        row['rain'], 
-        row['snow'],
-        row['mist_fog']), axis=1)
-    
-    # Save the result
-    print("Saving results...")
-    output_columns = [
-        'datetime', 'temperature', 'wind_speed', 'relative_humidity', 
-        'cloud_cover', 'mean_radiant_temp', 'precipitation',
-        'utci', 'utci_cat', 'rain', 'snow', 'mist_fog', 'weather_cat',
-        'sky_cover_1', 'sky_cover_2', 'sky_cover_3',
-        'pres_wx_AW1', 'pres_wx_AW2', 'pres_wx_AW3',
-        'pres_wx_MW1', 'pres_wx_MW2', 'pres_wx_MW3',
-        'pres_wx_AU1', 'pres_wx_AU2', 'pres_wx_AU3'
-    ]
-    
-    # Only include columns that exist in the dataframe
-    output_columns = [col for col in output_columns if col in df.columns]
-    df[output_columns].to_csv('data/weather/csv/nyc_weather_with_utci.csv', index=False)
-    
-    row_count = len(df)
-    print(f"Done! UTCI values have been calculated and saved for all {row_count} rows.")
-    print(f"  - {row_count - null_utci_count} rows with valid UTCI values")
-    print(f"  - {null_utci_count} rows with null UTCI values")
+    print(f"\n{'='*60}")
+    print("ALL BOROUGHS PROCESSED SUCCESSFULLY!")
+    print("Output files created:")
+    for borough in boroughs:
+        print(f"  - {borough}_weather_with_utci.csv")
+    print(f"{'='*60}")
 
 if __name__ == "__main__":
     main() 

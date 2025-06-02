@@ -33,7 +33,7 @@ def view_parquet(file_path, n_rows=5):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python view_parquet.py <path_to_parquet_file> [number_of_rows]")
+        print("Usage: python src/view_parquet.py <path_to_parquet_file> [number_of_rows]")
         sys.exit(1)
     
     file_path = sys.argv[1]

@@ -107,6 +107,10 @@ def create_utci_graphs():
         # Load the parquet file
         df = pd.read_parquet(file_path)
         
+        # Create datetime_hour column if it doesn't exist
+        if 'datetime_hour' not in df.columns:
+            df['datetime_hour'] = pd.to_datetime(df['start_time']).dt.floor('h')
+        
         # Create a datetime column from the datetime_hour to get hour of day
         df['hour_of_day'] = pd.to_datetime(df['datetime_hour']).dt.hour
         
@@ -172,6 +176,10 @@ def create_weather_graphs():
         # Load the parquet file
         df = pd.read_parquet(file_path)
         
+        # Create datetime_hour column if it doesn't exist
+        if 'datetime_hour' not in df.columns:
+            df['datetime_hour'] = pd.to_datetime(df['start_time']).dt.floor('h')
+        
         # Create a datetime column from the datetime_hour to get hour of day
         df['hour_of_day'] = pd.to_datetime(df['datetime_hour']).dt.hour
         
@@ -236,6 +244,10 @@ def create_weather_by_user_type_graphs():
         
         # Load the parquet file
         df = pd.read_parquet(file_path)
+        
+        # Create datetime_hour column if it doesn't exist
+        if 'datetime_hour' not in df.columns:
+            df['datetime_hour'] = pd.to_datetime(df['start_time']).dt.floor('h')
         
         # Create a datetime column from the datetime_hour to get hour of day
         df['hour_of_day'] = pd.to_datetime(df['datetime_hour']).dt.hour

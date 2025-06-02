@@ -52,6 +52,10 @@ def process_years_separately():
                 chunk = parquet_file.read_row_group(i).to_pandas()
                 pbar.update(1)
                 
+                # Create datetime_hour column if it doesn't exist
+                if 'datetime_hour' not in chunk.columns:
+                    chunk['datetime_hour'] = pd.to_datetime(chunk['start_time']).dt.floor('h')
+                
                 # Standardize user types
                 chunk = standardize_user_types(chunk)
                 

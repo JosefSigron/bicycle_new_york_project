@@ -179,10 +179,56 @@ def plot_decrease_probabilities(prob_data, weather_col, year, output_dir="result
     fig.suptitle(f'Probability of Ride Decrease vs Normal Weather by Hour - {year}\n(Weather Classification: {weather_col})', 
                  fontsize=16, fontweight='bold')
     
-    # Color palette for weather conditions
+    # Define intuitive color mapping for weather conditions
+    def get_weather_color_map(weather_conditions, weather_col):
+        color_map = {}
+        
+        if weather_col == 'weather_cat':
+            # Intuitive colors for weather categories
+            weather_colors = {
+                'Neutral': '#2E8B57',      # Sea green (neutral)
+                'Cold': '#4169E1',         # Royal blue (cold)
+                'Heat': '#DC143C',         # Crimson (hot)
+                'Rain': '#191970',         # Midnight blue (rain)
+                'Snow': '#B0C4DE',         # Light steel blue (snow)
+                'Mist/Fog': '#708090'      # Slate gray (mist/fog)
+            }
+        elif weather_col == 'utci_cat':
+            # Colors for UTCI categories (cold to hot spectrum)
+            weather_colors = {
+                'Extreme cold stress': '#000080',      # Navy (very cold)
+                'Very strong cold stress': '#0000CD',  # Medium blue
+                'Strong cold stress': '#4169E1',       # Royal blue
+                'Moderate cold stress': '#6495ED',     # Cornflower blue
+                'Slight cold stress': '#87CEEB',       # Sky blue
+                'No thermal stress': '#2E8B57',        # Sea green (neutral)
+                'Moderate heat stress': '#FF6347',     # Tomato
+                'Strong heat stress': '#DC143C',       # Crimson
+                'Very strong heat stress': '#8B0000',  # Dark red
+                'Extreme heat stress': '#B22222'       # Fire brick
+            }
+        else:
+            # Fallback to default colors
+            colors = plt.cm.Set3(np.linspace(0, 1, len(weather_conditions)))
+            weather_colors = dict(zip(weather_conditions, colors))
+        
+        # Only include colors for conditions that exist in the data
+        for condition in weather_conditions:
+            if condition in weather_colors:
+                color_map[condition] = weather_colors[condition]
+            else:
+                # Fallback color for unknown conditions
+                color_map[condition] = '#808080'  # Gray
+        
+        return color_map
+    
+    # Get weather conditions and color mapping
     weather_conditions = sorted([wc for wc in prob_data[weather_col].unique() if pd.notna(wc)])
-    colors = plt.cm.Set3(np.linspace(0, 1, len(weather_conditions)))
-    color_map = dict(zip(weather_conditions, colors))
+    color_map = get_weather_color_map(weather_conditions, weather_col)
+    
+    # Track legend elements (only need one set since they're the same for all subplots)
+    legend_elements = []
+    legend_labels = []
     
     for i, user_type in enumerate(user_types):
         ax = axes[i]
@@ -198,10 +244,15 @@ def plot_decrease_probabilities(prob_data, weather_col, year, output_dir="result
                 condition_data = condition_data.sort_values('hour')
                 
                 # Plot the main line
-                ax.plot(condition_data['hour'], condition_data['probability_decrease'],
+                line = ax.plot(condition_data['hour'], condition_data['probability_decrease'],
                        marker='o', linewidth=2, markersize=6,
                        color=color_map[weather_condition],
-                       label=f'{weather_condition}')
+                       label=f'{weather_condition}')[0]
+                
+                # Add to legend elements only once (from first subplot)
+                if i == 0:
+                    legend_elements.append(line)
+                    legend_labels.append(weather_condition)
                 
                 # Add stars for significant points
                 significant_data = condition_data[
@@ -221,19 +272,16 @@ def plot_decrease_probabilities(prob_data, weather_col, year, output_dir="result
         
         # Set x-axis ticks to show all hours
         ax.set_xticks(range(0, 24, 2))
-        
-        # Add legend
-        legend_elements = ax.get_legend_handles_labels()[0]
-        legend_labels = ax.get_legend_handles_labels()[1]
-        
-        # Add explanation for stars
-        from matplotlib.lines import Line2D
-        star_legend = Line2D([0], [0], marker='*', color='black', linestyle='None',
-                           markersize=10, label='Statistically significant (p<0.05)')
-        legend_elements.append(star_legend)
-        legend_labels.append('Statistically significant (p<0.05)')
-        
-        ax.legend(legend_elements, legend_labels, bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    # Add single legend for the entire figure
+    from matplotlib.lines import Line2D
+    star_legend = Line2D([0], [0], marker='*', color='black', linestyle='None',
+                       markersize=10, label='Statistically significant (p<0.05)')
+    legend_elements.append(star_legend)
+    legend_labels.append('Statistically significant (p<0.05)')
+    
+    # Place legend to the right of the figure
+    fig.legend(legend_elements, legend_labels, bbox_to_anchor=(1.02, 0.5), loc='center left')
     
     plt.tight_layout()
     

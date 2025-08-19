@@ -222,8 +222,51 @@ def plot_decrease_probabilities(prob_data, weather_col, year, output_dir="result
         
         return color_map
     
-    # Get weather conditions and color mapping
-    weather_conditions = sorted([wc for wc in prob_data[weather_col].unique() if pd.notna(wc)])
+    # Get weather conditions and color mapping with logical ordering
+    def get_logical_order(weather_conditions, weather_col):
+        """Define logical ordering for weather conditions"""
+        if weather_col == 'utci_cat':
+            # Order from coldest to hottest
+            utci_order = [
+                'Extreme cold stress',
+                'Very strong cold stress', 
+                'Strong cold stress',
+                'Moderate cold stress',
+                'Slight cold stress',
+                'No thermal stress',
+                'Moderate heat stress',
+                'Strong heat stress',
+                'Very strong heat stress',
+                'Extreme heat stress'
+            ]
+            # Only include categories that exist in the data, in the defined order
+            ordered_conditions = [cat for cat in utci_order if cat in weather_conditions]
+            # Add any categories not in our predefined order at the end
+            remaining = [cat for cat in weather_conditions if cat not in utci_order]
+            return ordered_conditions + sorted(remaining)
+        
+        elif weather_col == 'weather_cat':
+            # Order from neutral to more extreme conditions
+            weather_order = [
+                'Neutral',
+                'Cold',
+                'Heat',
+                'Mist/Fog',
+                'Rain',
+                'Snow'
+            ]
+            # Only include categories that exist in the data, in the defined order
+            ordered_conditions = [cat for cat in weather_order if cat in weather_conditions]
+            # Add any categories not in our predefined order at the end
+            remaining = [cat for cat in weather_conditions if cat not in weather_order]
+            return ordered_conditions + sorted(remaining)
+        
+        else:
+            # Default alphabetical sorting for unknown weather columns
+            return sorted(weather_conditions)
+    
+    unique_conditions = [wc for wc in prob_data[weather_col].unique() if pd.notna(wc)]
+    weather_conditions = get_logical_order(unique_conditions, weather_col)
     color_map = get_weather_color_map(weather_conditions, weather_col)
     
     # Track legend elements (only need one set since they're the same for all subplots)
